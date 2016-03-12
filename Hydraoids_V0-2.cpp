@@ -84,9 +84,14 @@ sf::Vector2f unity_vector(const sf::Vector2f& vektor)
 	
 }
 
-sf::Vector2f mouse_vector(sf::RenderWindow &window, const sf::Vector2f& position)
+sf::Vector2f mouse_position(sf::RenderWindow& window)
 {
-	return static_cast<sf::Vector2f>(sf::Mouse::getPosition(window)) - position;
+	return static_cast<sf::Vector2f>(sf::Mouse::getPosition(window));
+}
+
+sf::Vector2f mouse_vector(sf::RenderWindow& window, const sf::Vector2f& position)
+{
+	return mouse_position(window) - position;
 }
 
 sf::Vector2f direction_accel(sf::RenderWindow &window, const sf::Vector2f& position)
@@ -214,7 +219,7 @@ class hydra
 	const sf::Color m_light_orange{255, 195, 127};
 	const sf::Color m_light_red{255, 127, 127};
 	
-	sf::Color m_color{m_light_red};
+	sf::Color m_color{m_light_orange};
 	
 	sf::Texture m_texture;
 	sf::Sprite m_sprite;
@@ -252,7 +257,7 @@ class hydra
 		const float mult_posit{2.2f};
 		assert(mult_posit > 2.0f);
 		
-		const float mult_speed{10.0f};
+		const float mult_speed{100.0f};
 		assert(mult_speed > 0.0f);
 		
 		const sf::Vector2f unit_vect{unity_vector(mouse_vector(window, player_object.show_position()))};
@@ -320,8 +325,8 @@ int main()
 	const std::string program_name{"Hydraoids V0.2"};
 	assert(program_name != "");
 	
-	const float window_x{768.0f};
-	const float window_y{768.0f};
+	const float window_x{704.0f};
+	const float window_y{704.0f};
 	
 	const sf::Vector2f window_xy{window_x, window_y};
 	
@@ -368,6 +373,19 @@ int main()
 			
 			sf::Clock timer;
 			
+			if (hydra_count > 0)
+			{
+				int count{0};
+				
+				while(count < hydra_count)
+				{
+					hydra_objects[count].move_hydra(time_quant);
+					hydra_objects[count].edge_overlap(window_xy);
+					
+					++count;
+				}
+		}
+			
 			player_object.set_accel(window);
 			player_object.change_speed(time_quant);
 			player_object.move_player(time_quant);
@@ -389,14 +407,12 @@ int main()
 		// window.close();
 		// return 3;
 		
-		if (sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
-			!hydra_launched)
-		{
-			hydra_launched = true;
-		}
+		const sf::Vector2f mouse_posit{mouse_position(window)};
 		
-		if (!sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
-			hydra_launched)
+		if (sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
+			!hydra_launched &&
+			(mouse_posit.x > 0.0f) && (mouse_posit.x < window_x) &&
+			(mouse_posit.y > 0.0f) && (mouse_posit.y < window_y))
 		{
 			add_hydra(hydra_objects, window, player_object);
 			++hydra_count;
@@ -410,6 +426,12 @@ int main()
 				
 			}
 			
+			hydra_launched = true;
+		}
+		
+		if (!sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
+			hydra_launched)
+		{
 			hydra_launched = false;
 		}
 		
