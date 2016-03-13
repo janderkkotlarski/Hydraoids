@@ -392,7 +392,7 @@ class hydra
 		const float mult_posit{2.2f};
 		assert(mult_posit > 2.0f);
 		
-		const float mult_speed{100.0f};
+		const float mult_speed{250.0f};
 		assert(mult_speed > 0.0f);
 		
 		const sf::Vector2f unit_vect{unity_vector(mouse_vector(window, player_object.show_position()))};
