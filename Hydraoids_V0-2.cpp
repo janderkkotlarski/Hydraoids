@@ -94,13 +94,17 @@ sf::Vector2f mouse_vector(sf::RenderWindow& window, const sf::Vector2f& position
 	return mouse_position(window) - position;
 }
 
-sf::Vector2f direction_accel(sf::RenderWindow &window, const sf::Vector2f& position)
+sf::Vector2f direction_accel(sf::RenderWindow &window, const sf::Vector2f& window_xy, const sf::Vector2f& position)
 {
 	
 	const float mult{100.0f};
 	assert(mult > 0.0f);
 	
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
+	const sf::Vector2f mouse_posit{mouse_position(window)};
+	
+	if (sf::Mouse::isButtonPressed(sf::Mouse::Right) &&
+		(mouse_posit.x > 0.0f) && (mouse_posit.x < window_xy.x) &&
+		(mouse_posit.y > 0.0f) && (mouse_posit.y < window_xy.y))
 	{
 		return mult*unity_vector(mouse_vector(window, position));
 	}
@@ -152,9 +156,9 @@ class player
 	
 	public:
 	
-	void set_accel(sf::RenderWindow &window)
+	void set_accel(sf::RenderWindow& window, const sf::Vector2f& window_xy)
 	{
-		m_accel = direction_accel(window, m_position);
+		m_accel = direction_accel(window, window_xy, m_position);
 	}
 	
 	void change_speed(const float time_delta)
@@ -246,11 +250,6 @@ class hydra
 		m_sprite.setPosition(m_position);
 	}
 	
-	void set_color()
-	{
-		m_sprite.setColor(m_color);
-	}
-	
 	void intro_spedition(sf::RenderWindow& window, player& player_object)
 	{
 		
@@ -269,6 +268,16 @@ class hydra
 	}
 	
 	public:
+	
+	void set_color()
+	{
+		m_sprite.setColor(m_color);
+	}
+	
+	void change_color()
+	{
+		m_color = m_light_red;
+	}
 		
 	void move_hydra(const float time_delta)
 	{
@@ -291,6 +300,16 @@ class hydra
 	{
 		load_image();
 		texture_in_sprite();		
+	}
+	
+	float show_radius()
+	{
+		return m_radius;
+	}
+	
+	sf::Vector2f show_position()
+	{
+		return m_position;
 	}
 	
 	hydra(sf::RenderWindow& window, player& player_object)
@@ -316,6 +335,21 @@ void add_hydra(std::vector <hydra>& hydra_objects, sf::RenderWindow& window, pla
 {
 	
 	hydra_objects.push_back(hydra (window, player_object));
+	
+}
+
+void collide_hydra(hydra& hydra_object_a, hydra& hydra_object_b)
+{
+	
+	if (abs_vector(hydra_object_b.show_position() - hydra_object_a.show_position()) <
+		(hydra_object_a.show_radius() + hydra_object_b.show_radius()))
+	{
+		hydra_object_a.change_color();
+		hydra_object_a.set_color();
+		
+		hydra_object_b.change_color();
+		hydra_object_b.set_color();
+	}
 	
 }
 
@@ -384,9 +418,27 @@ int main()
 					
 					++count;
 				}
-		}
+				
+				count = 0;
+				
+				while(count < hydra_count - 1)
+				{
+					int count_2{count + 1};
+					
+					while (count_2 < hydra_count)
+					{
+						
+						collide_hydra(hydra_objects[count], hydra_objects[count_2]);
+						
+						++count_2;
+						
+					}
+					
+					++count;					
+				}
+			}
 			
-			player_object.set_accel(window);
+			player_object.set_accel(window, window_xy);
 			player_object.change_speed(time_quant);
 			player_object.move_player(time_quant);
 			player_object.edge_overlap(window_xy);
