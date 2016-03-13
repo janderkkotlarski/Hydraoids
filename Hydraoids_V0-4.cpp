@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <cmath>
@@ -21,7 +22,7 @@ void loading(sf::Texture& texture, const std::string& image_name)
 float originate(sf::Sprite& sprite)
 {
 	
-	const float mult{0.25f};
+	const float mult{0.23f};
 	assert(mult > 0.0f);
 		
 	const sf::FloatRect image_bounds{sprite.getLocalBounds()};		
@@ -45,6 +46,13 @@ void idle_wait(const float time_quant)
 float abs_vector(const sf::Vector2f& vektor)
 {
 	return std::sqrt(vektor.x*vektor.x + vektor.y*vektor.y);
+}
+
+float vector_dot_vector(const sf::Vector2f& vektor_a, const sf::Vector2f& vektor_b)
+{
+	
+	return vektor_a.x*vektor_b.x + vektor_a.y*vektor_b.y;
+	
 }
 
 void unbounding(sf::Vector2f& position, const sf::Vector2f& window_xy)
@@ -112,6 +120,109 @@ sf::Vector2f direction_accel(sf::RenderWindow &window, const sf::Vector2f& windo
 	return sf::Vector2f (0.0f, 0.0f);
 	
 }
+
+std::string score_to_string(const int skore)
+{
+    std::stringstream stringer;
+    stringer << skore;
+    return stringer.str();
+}
+
+class score
+{
+	
+	const std::string m_file_name{"VeraMono-Bold.ttf"};
+	
+	const float m_mult{0.07f};	
+	const float m_text_size{10.0f};
+	
+	const sf::Color m_creme{sf::Color(255, 224, 196, 255)};
+	
+	const std::string m_score_name{"Score: "};
+	
+	int m_score{0};
+	
+	sf::Font m_font;
+	
+	sf::Text m_text;
+	
+	void set_font()
+	{
+		
+		assert(m_file_name != "");
+		
+		if (!m_font.loadFromFile(m_file_name))
+		{
+			std::cout << m_file_name << " not found!\n";
+		}
+		 
+	}
+		
+	void set_text_font()
+	{
+		m_text.setFont(m_font);
+	}
+	
+	void set_text_size()
+	{
+		assert(m_text_size > 0.0f);
+		m_text.setCharacterSize(m_text_size);
+	}
+	
+	void set_color()
+	{
+		m_text.setColor(m_creme);
+	}
+	
+	void set_origin()
+	{
+		const sf::FloatRect rectangle{m_text.getLocalBounds()};
+		m_text.setOrigin(0.5f*rectangle.width, 0.95f*rectangle.height);
+	}
+	
+	void set_position(const sf::Vector2f& position)
+	{
+		m_text.setPosition(position);
+	}
+	
+	public:
+	
+	void add_score()
+	{
+		++m_score;
+	}
+	
+	void textify_score()
+	{
+		m_text.setString(m_score_name + score_to_string(m_score));
+	}
+	
+	void show_score(sf::RenderWindow& window)
+	{
+		window.draw(m_text);
+	}
+	
+	score(const sf::Vector2f& position)
+		: m_text_size(m_mult*(position.x + position.y)), m_font(), m_text()
+	{
+		assert(m_score_name != "");
+		assert(m_score == 0);
+		
+		set_font();
+		set_text_font();
+		set_text_size();
+		set_color();
+		textify_score();
+		set_origin();
+		set_position(position);
+	}
+	
+	~score()
+	{
+		
+	}
+	
+};
 
 class player
 {
@@ -231,6 +342,8 @@ class hydra
 	const sf::Color m_light_orange{255, 195, 127};
 	const sf::Color m_light_red{255, 127, 127};
 	
+	bool m_shot{true};
+	
 	sf::Color m_color{m_light_orange};
 	
 	sf::Texture m_texture;
@@ -258,6 +371,21 @@ class hydra
 		m_sprite.setPosition(m_position);
 	}
 	
+	void set_color()
+	{
+		m_sprite.setColor(m_color);
+	}
+	
+	void change_color()
+	{
+		m_color = m_light_red;
+	}
+	
+	void change_shot()
+	{
+		m_shot = false;
+	}
+	
 	void intro_spedition(sf::RenderWindow& window, player& player_object)
 	{
 		
@@ -277,14 +405,18 @@ class hydra
 	
 	public:
 	
-	void set_color()
+	void is_shot(score& game_score)
 	{
-		m_sprite.setColor(m_color);
-	}
-	
-	void change_color()
-	{
-		m_color = m_light_red;
+		
+		if (m_shot)
+		{
+			change_color();
+			set_color();
+			change_shot();
+			game_score.add_score();
+			game_score.textify_score();
+		}
+		
 	}
 		
 	void move_hydra(const float time_delta)
@@ -318,6 +450,16 @@ class hydra
 	sf::Vector2f show_position()
 	{
 		return m_position;
+	}
+	
+	sf::Vector2f show_speed()
+	{
+		return m_speed;
+	}
+	
+	void set_speed(const sf::Vector2f& speed)
+	{
+		m_speed = speed;
 	}
 	
 	hydra(sf::RenderWindow& window, player& player_object)
@@ -362,8 +504,10 @@ void confirm_hydras(std::vector <hydra>& hydra_objects, const int hydra_count)
 }
 
 void left_mouse_button(sf::RenderWindow& window, std::vector <hydra>& hydra_objects, player& player_object,
-					   const sf::Vector2f& window_xy, int& hydra_count, bool& hydra_launched)
+					   const sf::Vector2f& window_xy, int& hydra_count, bool& hydra_launched, int& hydra_countdown)
 {
+	
+	const int  countdown{10};
 	
 	const sf::Vector2f mouse_posit{mouse_position(window)};
 		
@@ -378,11 +522,13 @@ void left_mouse_button(sf::RenderWindow& window, std::vector <hydra>& hydra_obje
 		confirm_hydras(hydra_objects, hydra_count);
 		
 		hydra_launched = true;
+		
+		hydra_countdown = countdown;
 	}
 	
 	if (!sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
-		hydra_launched)
-	{
+		hydra_launched && (hydra_countdown == 0))
+	{		
 		hydra_launched = false;
 	}
 	
@@ -419,22 +565,42 @@ void move_hydras(std::vector <hydra>& hydra_objects, const sf::Vector2f& window_
 	
 }
 
-void colloride_hydras(hydra& hydra_object_a, hydra& hydra_object_b)
+void colloride_hydras(hydra& hydra_object_a, hydra& hydra_object_b, score& game_score)
+{
+		hydra_object_a.is_shot(game_score);
+		hydra_object_b.is_shot(game_score);
+}
+
+void elastic_hydras(hydra& hydra_object_a, hydra& hydra_object_b)
+{
+	
+	const sf::Vector2f hydra_speed_a{hydra_object_a.show_speed()};
+	const sf::Vector2f hydra_speed_b{hydra_object_b.show_speed()};
+	
+	const sf::Vector2f delta_position{hydra_object_b.show_position() - hydra_object_a.show_position()};	
+	const sf::Vector2f delta_speed{hydra_speed_b - hydra_speed_a};
+	
+	const float speed_dot_position{vector_dot_vector(delta_speed, delta_position)};	
+	const float position_dot_position{vector_dot_vector(delta_position, delta_position)};
+	
+	hydra_object_a.set_speed(hydra_speed_a + (speed_dot_position/position_dot_position)*delta_position);
+	hydra_object_b.set_speed(hydra_speed_b - (speed_dot_position/position_dot_position)*delta_position);
+	
+}
+
+void collision_hydras(hydra& hydra_object_a, hydra& hydra_object_b, score& game_score)
 {
 	
 	if (abs_vector(hydra_object_b.show_position() - hydra_object_a.show_position()) <
 		(hydra_object_a.show_radius() + hydra_object_b.show_radius()))
 	{
-		hydra_object_a.change_color();
-		hydra_object_a.set_color();
-		
-		hydra_object_b.change_color();
-		hydra_object_b.set_color();
+		colloride_hydras(hydra_object_a, hydra_object_b, game_score);
+		elastic_hydras(hydra_object_a, hydra_object_b);
 	}
 	
 }
 
-void collide_hydras(std::vector <hydra>& hydra_objects, const int hydra_count)
+void collide_hydras(std::vector <hydra>& hydra_objects, const int hydra_count, score& game_score)
 {
 	
 	int count{0};
@@ -447,7 +613,7 @@ void collide_hydras(std::vector <hydra>& hydra_objects, const int hydra_count)
 		while (count_2 < hydra_count)
 		{
 			
-			colloride_hydras(hydra_objects[count], hydra_objects[count_2]);			
+			collision_hydras(hydra_objects[count], hydra_objects[count_2], game_score);			
 			++count_2;
 			
 		}
@@ -458,10 +624,44 @@ void collide_hydras(std::vector <hydra>& hydra_objects, const int hydra_count)
 
 }
 
+bool player_collide_hydra(player& player_object, hydra& hydra_object)
+{
+	
+	if (abs_vector(player_object.show_position() - hydra_object.show_position()) <
+		(player_object.show_radius() + hydra_object.show_radius()))
+	{
+		return true;
+	}
+	
+	return false;
+	
+}
+
+bool player_collide_hydras(player& player_object, std::vector <hydra>& hydra_objects, const int hydra_count)
+{
+	
+	int count{0};
+	
+	bool collided{false};
+	
+	while(count < hydra_count)
+	{
+		if (player_collide_hydra(player_object, hydra_objects[count]))
+		{
+			collided = true;	
+		}
+		
+		++count;
+	}
+	
+	return collided;
+	
+}
+
 int main()
 {
 	
-	const std::string program_name{"Hydraoids V0.3"};
+	const std::string program_name{"Hydraoids V0.4"};
 	assert(program_name != "");
 	
 	const float window_x{704.0f};
@@ -480,80 +680,105 @@ int main()
 	
 	const sf::Color black{sf::Color(0, 0, 0)};
 	
-	player player_object{0.5f*window_xy};
-	
-	std::vector <hydra> hydra_objects;
-	int hydra_count{0};
-	assert(hydra_count == 0);
-	
-	bool hydra_launched{false};
-	
 	sf::RenderWindow window{sf::VideoMode(window_x, window_y), program_name, sf::Style::Default};
 	
 	while (window.isOpen())
     {
 		
-		sf::Clock clock;
+		player player_object{0.5f*window_xy};
+	
+		std::vector <hydra> hydra_objects;
+		int hydra_count{0};
+		assert(hydra_count == 0);
 		
-		sf::Event event;
+		bool alive{true};
 		
-		window.clear(black);
+		score game_score{sf::Vector2f (0.48f*window_x, 0.035f*window_y)};
 		
-		if (hydra_count > 0)
-		{
-			show_hydras(window, hydra_objects, hydra_count);
-		}
+		bool hydra_launched{false};
+		assert(!hydra_launched);
 		
-		player_object.show_object(window);
+		int hydra_countdown{0};
+		assert(hydra_countdown == 0);
 		
-		window.display();
-		
-		while (clock.getElapsedTime().asSeconds() < time_delta)
+		while (alive)
 		{
 			
-			sf::Clock timer;
+			sf::Clock clock;
+			
+			sf::Event event;
+			
+			window.clear(black);
 			
 			if (hydra_count > 0)
 			{
-				move_hydras(hydra_objects, window_xy, time_quant, hydra_count);
-				collide_hydras(hydra_objects, hydra_count);
+				show_hydras(window, hydra_objects, hydra_count);
 			}
 			
-			player_object.move_player_object(window, window_xy, time_quant);
+			player_object.show_object(window);
 			
-			// std::cout << timer.getElapsedTime().asSeconds() << "!\n";
+			game_score.show_score(window);
 			
-			while (timer.getElapsedTime().asSeconds() < time_quant)
+			window.display();
+			
+			while (clock.getElapsedTime().asSeconds() < time_delta)
 			{
-				// std::cout << timer.getElapsedTime().asSeconds() << "\n";
+				
+				sf::Clock timer;
+				
+				if (hydra_count > 0)
+				{
+					move_hydras(hydra_objects, window_xy, time_quant, hydra_count);
+					collide_hydras(hydra_objects, hydra_count, game_score);
+					alive = !player_collide_hydras(player_object, hydra_objects, hydra_count);
+				}
+				
+				player_object.move_player_object(window, window_xy, time_quant);
+				
+				// std::cout << timer.getElapsedTime().asSeconds() << "!\n";
+				
+				while (timer.getElapsedTime().asSeconds() < time_quant)
+				{
+					// std::cout << timer.getElapsedTime().asSeconds() << "\n";
+				}
+				
+				// std::cout << timer.getElapsedTime().asSeconds() << "?\n";
+				
+				// idle_wait(time_quant);
+				
 			}
 			
-			// std::cout << timer.getElapsedTime().asSeconds() << "?\n";
-			
-			// idle_wait(time_quant);
-			
-		}
-		
-		// window.close();
-		// return 3;
-		
-		left_mouse_button(window, hydra_objects, player_object, window_xy, hydra_count, hydra_launched);
-		
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
-		{
-			window.close();                    
-			return 1;
-		}
-		
-		while (window.pollEvent(event))
-		{
-			
-			if (event.type == sf::Event::Closed)
+			// window.close();
+			// return 3;
+					
+			if (hydra_countdown > 0)
 			{
-				window.close();                
-				return 2;
+				--hydra_countdown;
 			}
-		
+			else if (hydra_countdown < 0)
+			{
+				hydra_countdown = 0;
+			}
+			
+			left_mouse_button(window, hydra_objects, player_object, window_xy, hydra_count, hydra_launched, hydra_countdown);
+						
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
+			{
+				window.close();                    
+				return 1;
+			}
+			
+			while (window.pollEvent(event))
+			{
+				
+				if (event.type == sf::Event::Closed)
+				{
+					window.close();                
+					return 2;
+				}
+			
+			}
+			
 		}
 		
 	}	
