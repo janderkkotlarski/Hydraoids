@@ -133,7 +133,7 @@ class score
 	
 	const std::string m_file_name{"VeraMono-Bold.ttf"};
 	
-	const float m_mult{0.07f};	
+	const float m_mult{0.012f};	
 	const float m_text_size{10.0f};
 	
 	const sf::Color m_creme{sf::Color(255, 224, 196, 255)};
@@ -192,6 +192,16 @@ class score
 		++m_score;
 	}
 	
+	void set_score(const int new_score)
+	{
+		m_score = new_score;
+	}
+	
+	int get_score()
+	{
+		return m_score;
+	}
+	
 	void textify_score()
 	{
 		m_text.setString(m_score_name + score_to_string(m_score));
@@ -202,8 +212,8 @@ class score
 		window.draw(m_text);
 	}
 	
-	score(const sf::Vector2f& position)
-		: m_text_size(m_mult*(position.x + position.y)), m_font(), m_text()
+	score(const sf::Vector2f& position, const sf::Vector2f& window_xy, const std::string& name)
+		: m_text_size(m_mult*(window_xy.x + window_xy.y)), m_score_name(name + ": "), m_font(), m_text()
 	{
 		assert(m_score_name != "");
 		assert(m_score == 0);
@@ -304,6 +314,11 @@ class player
 		return m_position;
 	}
 	
+	sf::Vector2f show_speed()
+	{
+		return m_speed;
+	}
+	
 	void move_player_object(sf::RenderWindow& window, const sf::Vector2f& window_xy, const float time_quant)
 	{
 		set_accel(window, window_xy);
@@ -399,7 +414,7 @@ class hydra
 		
 		m_position = mult_posit*player_object.show_radius()*unit_vect + player_object.show_position();
 		
-		m_speed = mult_speed*unit_vect;
+		m_speed = mult_speed*unit_vect + player_object.show_speed();
 		
 	}
 	
@@ -507,7 +522,7 @@ void left_mouse_button(sf::RenderWindow& window, std::vector <hydra>& hydra_obje
 					   const sf::Vector2f& window_xy, int& hydra_count, bool& hydra_launched, int& hydra_countdown)
 {
 	
-	const int  countdown{10};
+	const int  countdown{6};
 	
 	const sf::Vector2f mouse_posit{mouse_position(window)};
 		
@@ -682,6 +697,9 @@ int main()
 	
 	sf::RenderWindow window{sf::VideoMode(window_x, window_y), program_name, sf::Style::Default};
 	
+	const std::string high_score_name{"Highscore"};
+	score high_score{sf::Vector2f (0.48f*window_x, 0.965f*window_y), window_xy, high_score_name};
+	
 	while (window.isOpen())
     {
 		
@@ -693,7 +711,8 @@ int main()
 		
 		bool alive{true};
 		
-		score game_score{sf::Vector2f (0.48f*window_x, 0.035f*window_y)};
+		const std::string game_score_name{"Score"};
+		score game_score{sf::Vector2f (0.48f*window_x, 0.035f*window_y), window_xy, game_score_name};		
 		
 		bool hydra_launched{false};
 		assert(!hydra_launched);
@@ -718,6 +737,7 @@ int main()
 			player_object.show_object(window);
 			
 			game_score.show_score(window);
+			high_score.show_score(window);
 			
 			window.display();
 			
@@ -761,6 +781,13 @@ int main()
 			}
 			
 			left_mouse_button(window, hydra_objects, player_object, window_xy, hydra_count, hydra_launched, hydra_countdown);
+			
+			if (game_score.get_score() > high_score.get_score())
+			{
+				high_score.set_score(game_score.get_score());
+				high_score.textify_score();
+				
+			}
 						
 			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
 			{
@@ -780,6 +807,8 @@ int main()
 			}
 			
 		}
+		
+		
 		
 	}	
 	
