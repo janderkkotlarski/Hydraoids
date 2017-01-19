@@ -710,7 +710,7 @@ void limit_hydras(std::vector <hydra>& hydra_objects, int& hydra_count)
 int main()
 {
 	
-	const std::string program_name{"Hydraoids V0.5"};
+	const std::string program_name{"Hydraoids V0.6"};
 	assert(program_name != "");
 	
 	const float window_x{704.0f};
@@ -723,11 +723,15 @@ int main()
 	
 	const float time_quant{0.001f};
 	assert(time_quant > 0.0f);
-	
+
 	const float time_delta{25.0f*time_quant};
 	assert(time_delta > time_quant);
 	
 	const sf::Color black{sf::Color(0, 0, 0)};
+	
+	const sf::Color light_blue{sf::Color(127, 127, 255)};
+	
+	bool intro_screen{true};
 	
 	sf::RenderWindow window{sf::VideoMode(window_x, window_y), program_name, sf::Style::Default};
 	
@@ -736,6 +740,49 @@ int main()
 	
 	while (window.isOpen())
     {
+		
+		while (intro_screen)
+		{
+			
+			sf::Event event;
+			
+			sf::Clock clock;
+			
+			window.clear(light_blue);
+			
+			window.display();
+			
+			while (clock.getElapsedTime().asSeconds() < time_delta)
+			{
+				
+			}
+			
+			
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
+			{
+				intro_screen = false;
+			}
+			
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
+			{
+				window.close();                    
+				return 1;
+			}
+			
+			
+			
+			while (window.pollEvent(event))
+			{
+				
+				if (event.type == sf::Event::Closed)
+				{
+					window.close();                
+					return 2;
+				}
+			
+			}
+			
+		}
 		
 		while(true)
 		{
